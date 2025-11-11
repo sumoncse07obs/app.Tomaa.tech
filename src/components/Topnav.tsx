@@ -5,7 +5,7 @@ export default function Topnav() {
   const { pathname } = useLocation();
 
   const navItems = [
-    { name: "Learning Center", to: "https://tomaa.tech/learning-center },
+    { name: "Learning Center", to: "https://tomaa.tech/learning-center" },
     { name: "Contact Us", to: "https://tomaa.tech/contact-us" },
   ];
 
