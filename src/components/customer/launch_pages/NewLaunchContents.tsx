@@ -63,10 +63,7 @@ async function getCustomerIdFromAuth(): Promise<number> {
   }
 
   const { data } = await response.json();
-  //console.log("Fetched customer data:", data); // Log to verify the structure
-
-  // Assuming customer_id is part of the response
-  return data.customer_id; // Make sure the response has customer_id
+  return data.customer_id;
 }
 
 function formatDuration(ms: number) {
@@ -84,6 +81,9 @@ function titleCase(s: string) {
 const USES_CONTENT = CONTEXT === "launch";
 
 export default function NewLaunchContents() {
+  // Title for launch
+  const [title, setTitle] = useState("");
+
   // CONTENT for launch
   const [contentText, setContentText] = useState("");
 
@@ -119,7 +119,7 @@ export default function NewLaunchContents() {
     const fetchCustomerId = async () => {
       try {
         const id = await getCustomerIdFromAuth();
-        setCustomerId(id); // Save customerId in state
+        setCustomerId(id);
       } catch (error) {
         console.error("Failed to fetch customer ID:", error);
       }
@@ -177,11 +177,7 @@ export default function NewLaunchContents() {
       const data = (await resp.json()) as MakeImageResponse;
 
       const newUrl =
-        data?.image_url ??
-        data?.data?.image_url ??
-        data?.url ??
-        data?.data?.url ??
-        null;
+        data?.image_url ?? data?.data?.image_url ?? data?.url ?? data?.data?.url ?? null;
 
       if (typeof newUrl === "string" && newUrl) {
         setOut((prev) => ({ ...prev, image_url: newUrl }));
@@ -275,7 +271,7 @@ export default function NewLaunchContents() {
 
     const startedAt = Date.now();
     try {
-      const customerId = await getCustomerIdFromAuth(); // Fetch customer_id from backend
+      const customerId = await getCustomerIdFromAuth();
 
       if (USES_CONTENT) {
         // LAUNCH: only launch_content (no topic/keywords)
@@ -285,6 +281,7 @@ export default function NewLaunchContents() {
         const body = {
           customer_id: customerId,
           prompt_for: CONTEXT, // "launch"
+          launch_title: title || null,
           launch_content: text,
           reset: true,
         };
@@ -408,8 +405,7 @@ export default function NewLaunchContents() {
         Toma <span className="font-bold">{titleNoun}</span> Automation
       </h1>
 
-      {/* Display the customer ID here 
-      <p>Customer# {customerId}</p>*/}
+      {/* <p>Customer# {customerId}</p> */}
 
       <div className="relative w-full max-w-6xl">
         {isBusy && (
@@ -424,6 +420,14 @@ export default function NewLaunchContents() {
           {/* ======= INPUT AREA ======= */}
           {USES_CONTENT ? (
             <div className="grid gap-4">
+              <input
+                type="text"
+                placeholder="Enter a launch title…"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full h-12 border border-gray-300 rounded-md px-4 outline-none focus:ring-2 focus:ring-teal-400"
+              />
+
               <textarea
                 placeholder={inputPlaceholder}
                 value={contentText}
@@ -628,7 +632,8 @@ export default function NewLaunchContents() {
                   </span>
                 )}
               </span>{" "}
-              or Click Next to see and edit social media output, while you wait for the video to finish being built.
+              or Click Next to see and edit social media output, while you wait for the video to finish
+              being built.
             </p>
 
             <button
