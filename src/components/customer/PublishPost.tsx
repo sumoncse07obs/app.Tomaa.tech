@@ -202,7 +202,11 @@ function isBlotatoHosted(u?: string | null) {
   }
 }
 
-const mediaBoxClassBySize: Record<PreviewSize, string> = { sm: "w-64 h-40", md: "w-96 h-56", lg: "w-full h-72" };
+const mediaBoxClassBySize: Record<PreviewSize, string> = {
+  sm: "w-64 h-40",
+  md: "w-96 h-56",
+  lg: "w-full h-72",
+};
 
 function normalizePlatform(ui: string, reelsPlatform: "facebook" | "instagram"): string {
   if (ui === "Reals") return reelsPlatform === "facebook" ? "facebook_reels" : "instagram_reels";
@@ -253,6 +257,20 @@ function nowUtcIsoSeconds() {
   return `${yyyy}-${mm}-${dd}T${hh}:${mi}:${ss}Z`;
 }
 
+/* ---- Eastern timezone formatting helper ---- */
+function formatInEastern(dt: Date): string {
+  if (isNaN(dt.getTime())) return "";
+  return dt.toLocaleString("en-US", {
+    timeZone: "America/New_York",
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
 /* ===================== Customer Settings types/helpers ===================== */
 type CustomerSettings = {
   blotato_facebook_id?: string | null;
@@ -277,7 +295,10 @@ function hasId(v: unknown): boolean {
   if (Array.isArray(v)) return v.some((x) => String(x ?? "").trim() !== "");
   const s = String(v).trim();
   if (!s) return false;
-  return s.split(",").map((x) => x.trim()).filter(Boolean).length > 0;
+  return s
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean).length > 0;
 }
 
 /* =============================== Component =============================== */
@@ -396,6 +417,18 @@ export default function PublishPost() {
     const t = window.setInterval(() => setNowUtcIso(nowUtcIsoSeconds()), 1000);
     return () => clearInterval(t);
   }, [showSchedule]);
+
+  // ===== Eastern time derived values for modal =====
+  const easternNow = useMemo(() => {
+    const d = new Date(nowUtcIso);
+    return formatInEastern(d);
+  }, [nowUtcIso]);
+
+  const easternScheduled = useMemo(() => {
+    if (!scheduledAtLocal) return "";
+    const d = new Date(scheduledAtLocal);
+    return formatInEastern(d);
+  }, [scheduledAtLocal]);
 
   /* ----------------------------- load record ----------------------------- */
   useEffect(() => {
@@ -629,7 +662,9 @@ export default function PublishPost() {
           platform: platformKey,
           post_type: effectivePostType,
         });
-        const js = await api<any>(`/publish/logs/latest?${params.toString()}`, { headers: { Accept: "application/json" } });
+        const js = await api<any>(`/publish/logs/latest?${params.toString()}`, {
+          headers: { Accept: "application/json" },
+        });
         const log = js?.data;
 
         if (!log) {
@@ -1235,6 +1270,7 @@ export default function PublishPost() {
               Live Preview ·{" "}
               {selectedPlatform === "Reals"
                 ? `Reels · ${reelsPlatform === "facebook" ? "Facebook" : "Instagram"}`
+
                 : `${selectedPlatform} · ${postType.toUpperCase()}`}
             </div>
 
@@ -1254,7 +1290,12 @@ export default function PublishPost() {
               <div
                 className={`rounded-md mb-3 border border-gray-200 overflow-hidden flex items-center justify-center bg-black/5 ${mediaBoxClassBySize[previewSize]}`}
               >
-                <video key={previewMedia.videoUrl} src={previewMedia.videoUrl} controls className="w-full h-full object-cover" />
+                <video
+                  key={previewMedia.videoUrl}
+                  src={previewMedia.videoUrl}
+                  controls
+                  className="w-full h-full object-cover"
+                />
               </div>
             ) : (
               <div
@@ -1267,7 +1308,9 @@ export default function PublishPost() {
             )
           ) : previewMedia.showImage ? (
             previewMedia.imageUrl ? (
-              <div className={`rounded-md mb-3 border border-gray-200 overflow-hidden bg-gray-50 ${mediaBoxClassBySize[previewSize]}`}>
+              <div
+                className={`rounded-md mb-3 border border-gray-200 overflow-hidden bg-gray-50 ${mediaBoxClassBySize[previewSize]}`}
+              >
                 <img src={previewMedia.imageUrl} alt="Post image" className="w-full h-full object-cover" />
               </div>
             ) : (
@@ -1308,17 +1351,25 @@ export default function PublishPost() {
             </div>
 
             <p className="text-sm text-gray-600 mt-2">
-              Can you add if you want to post to another time zone just adjust it accordingly.
+              Pick the time in <span className="font-medium">your local timezone</span>.{" "}
+              If you need to align with a team or client on the East Coast, here’s the current Eastern Time (ET):
+              <br />
+              <span className="text-xs text-gray-800 font-mono">{easternNow || "—"}</span>
             </p>
 
             <div className="mt-4">
-              <label className="text-sm font-medium text-gray-700">Date &amp; time</label>
+              <label className="text-sm font-medium text-gray-700">Date &amp; time (local)</label>
               <input
                 type="datetime-local"
                 value={scheduledAtLocal}
                 onChange={(e) => setScheduledAtLocal(e.target.value)}
                 className="mt-1 w-full h-11 border border-gray-300 rounded-md px-3 outline-none focus:ring-2 focus:ring-teal-400"
               />
+              {scheduledAtLocal && easternScheduled && (
+                <div className="text-xs text-gray-500 mt-1">
+                  This will be: <span className="font-mono">{easternScheduled}</span> Eastern Time (ET)
+                </div>
+              )}
               {scheduleErr && <div className="text-xs text-red-600 mt-1">{scheduleErr}</div>}
             </div>
 
