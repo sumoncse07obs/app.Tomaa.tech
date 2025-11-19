@@ -1,6 +1,6 @@
 // src/components/tools/PostToBlotato.tsx
 import React, { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
 const TOKEN_KEY = "toma_token";
@@ -43,8 +43,25 @@ type UploadResp = { url?: string; data?: { url?: string }; message?: string };
 
 // ------------ component ------------
 export default function PostToBlotato() {
-  const { id } = useParams(); // /blog/posttoblotato/:id
+  const { id } = useParams(); // /blog/posttoblotato/:id or /youtube/posttoblotato/:id, etc.
+  const location = useLocation();
+
   const generationId = useMemo(() => (id ? parseInt(id, 10) : undefined), [id]);
+
+  // Detect context: blog | youtube | topic | launch
+  const contextSegment = useMemo(() => {
+    const first = location.pathname.split("/").filter(Boolean)[0];
+    if (["blog", "youtube", "topic", "launch"].includes(first)) {
+      return first as "blog" | "youtube" | "topic" | "launch";
+    }
+    return "blog"; // sensible default
+  }, [location.pathname]);
+
+const backHref = useMemo(() => {
+  if (!generationId) return null;
+  return `/customer/${contextSegment}/view/${generationId}`;
+}, [contextSegment, generationId]);
+
 
   // Inputs
   const [imgSrc, setImgSrc] = useState("");
@@ -124,7 +141,7 @@ export default function PostToBlotato() {
         method: "POST",
         body: JSON.stringify({
           url: val,
-          kind,                    // "image" | "video"
+          kind, // "image" | "video"
           generation_id: generationId,
           customer_id: customerId, // ✅ always pass it
         }),
@@ -151,7 +168,7 @@ export default function PostToBlotato() {
         const isCors = e?.name === "TypeError" && /fetch/i.test(msg);
         const nice = isCors
           ? "Upload failed due to a CORS block. The API must allow this origin."
-          : (msg || `Failed to upload ${kind}.`);
+          : msg || `Failed to upload ${kind}.`;
         setErr(nice);
         toast.error(nice);
       }
@@ -165,9 +182,22 @@ export default function PostToBlotato() {
 
   return (
     <div className="p-4 md:p-6">
+      {/* 🔙 Back button */}
+      {backHref && (
+        <div className="mb-4">
+          <Link
+            to={backHref}
+            className="inline-flex items-center text-sm px-3 py-1.5 rounded-md border border-gray-300 bg-white hover:bg-gray-50 text-gray-700"
+          >
+            <span className="mr-1">←</span>
+            Back to {contextSegment} post
+          </Link>
+        </div>
+      )}
+
       {!generationId && (
         <div className="mb-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-md p-3">
-          Missing content generation id in URL. Open this page via <code>/blog/posttoblotato/:id</code>.
+          Missing content generation id in URL. Open this page via <code>/{contextSegment}/posttoblotato/:id</code>.
         </div>
       )}
 
@@ -194,7 +224,9 @@ export default function PostToBlotato() {
             />
             <button
               className={`h-12 rounded-md text-white ${
-                imgButtonDisabled ? "bg-teal-400 opacity-60 cursor-not-allowed" : "bg-teal-500 hover:bg-teal-600"
+                imgButtonDisabled
+                  ? "bg-teal-400 opacity-60 cursor-not-allowed"
+                  : "bg-teal-500 hover:bg-teal-600"
               }`}
               disabled={imgButtonDisabled}
               onClick={() => handleUpload("image")}
@@ -216,7 +248,9 @@ export default function PostToBlotato() {
             />
             <button
               className={`h-12 rounded-md text-white ${
-                vidButtonDisabled ? "bg-teal-400 opacity-60 cursor-not-allowed" : "bg-teal-500 hover:bg-teal-600"
+                vidButtonDisabled
+                  ? "bg-teal-400 opacity-60 cursor-not-allowed"
+                  : "bg-teal-500 hover:bg-teal-600"
               }`}
               disabled={vidButtonDisabled}
               onClick={() => handleUpload("video")}
@@ -242,7 +276,10 @@ export default function PostToBlotato() {
               <div className="text-xs text-blue-600">Click URL link to see image</div>
             </a>
           ) : (
-            <button className="w-full bg-white border border-gray-300 rounded-md py-1 px-4 text-center shadow-sm" disabled>
+            <button
+              className="w-full bg-white border border-gray-300 rounded-md py-1 px-4 text-center shadow-sm"
+              disabled
+            >
               <div className="text-gray-700 font-medium">Image OutPut Url Here</div>
               <div className="text-xs text-blue-600">Click URL link to see image</div>
             </button>
@@ -261,14 +298,19 @@ export default function PostToBlotato() {
               <div className="text-xs text-blue-600">Click URL link to see video</div>
             </a>
           ) : (
-            <button className="w-full bg-white border border-gray-300 rounded-md py-1 px-4 text-center shadow-sm" disabled>
+            <button
+              className="w-full bg-white border border-gray-300 rounded-md py-1 px-4 text-center shadow-sm"
+              disabled
+            >
               <div className="text-gray-700 font-medium">Video OutPut Url Here</div>
               <div className="text-xs text-blue-600">Click URL link to see video</div>
             </button>
           )}
 
           {customerId ? (
-            <p className="text-[11px] text-gray-500 text-center">Using <span className="font-medium">customer_id: {customerId}</span></p>
+            <p className="text-[11px] text-gray-500 text-center">
+              Using <span className="font-medium">customer_id: {customerId}</span>
+            </p>
           ) : null}
 
           <p className="text-[11px] text-gray-500 pl-1 text-center">**it 4 or 5 min to produce the video**</p>
