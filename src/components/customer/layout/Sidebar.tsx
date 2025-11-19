@@ -1,7 +1,7 @@
 // src/components/customer/layout/Sidebar.tsx
 import React from "react";
-import { NavLink, useNavigate, useLocation } from "react-router-dom";
-import { logout, type User} from "@/auth";
+import { NavLink, useNavigate } from "react-router-dom";
+import { logout, type User } from "@/auth";
 
 type Props = {
   open: boolean;
@@ -18,7 +18,7 @@ const navItems = [
   { to: "/customer/topic/list", label: "Topic Automation", icon: "📚" },
   { to: "/customer/launch/list", label: "Launch Automation", icon: "🚀" },
   { to: "/customer/tips", label: "Tips & Tricks", icon: "💡" },
-  { to: "/customer/training",    label: "Training Videos",    icon: "🎥" },
+  { to: "/customer/training", label: "Training Videos", icon: "🎥" },
 ];
 
 export default function Sidebar({
@@ -30,8 +30,19 @@ export default function Sidebar({
   customerNumber,
 }: Props) {
   const nav = useNavigate();
-  const location = useLocation();
   const [loggingOut, setLoggingOut] = React.useState(false);
+
+  // 🔹 Pull business_name from localStorage (set by getCustomerNumber)
+  const [businessName, setBusinessName] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    try {
+      const name = localStorage.getItem("business_name");
+      if (name) setBusinessName(name);
+    } catch {
+      // ignore if localStorage not available
+    }
+  }, []);
 
   const display = user?.name || user?.email || "Guest";
   const initial = display?.[0]?.toUpperCase() || "?";
@@ -57,9 +68,17 @@ export default function Sidebar({
       >
         {/* Brand + collapse */}
         <div className="h-16 flex items-center px-4 border-b justify-between">
-          <NavLink to="/customer" className="flex items-center gap-2" onClick={() => setOpen(false)}>
+          <NavLink
+            to="/customer"
+            className="flex items-center gap-2"
+            onClick={() => setOpen(false)}
+          >
             <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500 to-sky-400 overflow-hidden">
-              <img src="/logo.svg" alt="TOMA Logo" className="h-9 w-9 rounded-xl object-contain" />
+              <img
+                src="/logo.svg"
+                alt="TOMA Logo"
+                className="h-9 w-9 rounded-xl object-contain"
+              />
             </div>
             {!collapsed && <span className="font-semibold">TOMA</span>}
           </NavLink>
@@ -88,7 +107,9 @@ export default function Sidebar({
               to={it.to}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2 rounded-lg text-sm ${
-                  isActive ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100"
+                  isActive
+                    ? "bg-slate-900 text-white"
+                    : "text-slate-700 hover:bg-slate-100"
                 }`
               }
               onClick={() => setOpen(false)}
@@ -108,11 +129,20 @@ export default function Sidebar({
               <span className="font-medium">{initial}</span>
             ) : (
               <>
-                <span className="font-medium truncate">{display}</span>
+                <span className="text-xs text-slate-600 truncate">Name: {display}</span>
+
                 {isCustomer && (
-                  <div className="text-xs text-slate-500 truncate">
-                    Customer #{customerNumber ?? "—"}
-                  </div>
+                  <>
+                    {/* 🔹 Business name right above Customer # */}
+                    {businessName && (
+                      <div className="text-xs text-slate-600 truncate">
+                        Company # {businessName}
+                      </div>
+                    )}
+                    <div className="text-xs text-slate-500 truncate">
+                      Customer #{customerNumber ?? "—"}
+                    </div>
+                  </>
                 )}
               </>
             )}
