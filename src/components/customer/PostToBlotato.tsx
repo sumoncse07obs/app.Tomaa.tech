@@ -33,8 +33,11 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
     const text = await res.text().catch(() => "");
     throw new Error(`HTTP ${res.status} ${res.statusText} @ ${url}\n${text}`);
   }
+
   const ct = res.headers.get("content-type") || "";
-  return ct.includes("application/json") ? ((await res.json()) as T) : (undefined as T);
+  return ct.includes("application/json")
+    ? ((await res.json()) as T)
+    : (undefined as T);
 }
 
 // ------------ types ------------
@@ -43,25 +46,32 @@ type UploadResp = { url?: string; data?: { url?: string }; message?: string };
 
 // ------------ component ------------
 export default function PostToBlotato() {
-  const { id } = useParams(); // /blog/posttoblotato/:id or /youtube/posttoblotato/:id, etc.
+  const { id } = useParams(); // route: /customer/:context/posttoblotato/:id
   const location = useLocation();
 
-  const generationId = useMemo(() => (id ? parseInt(id, 10) : undefined), [id]);
+  const generationId = useMemo(
+    () => (id ? parseInt(id, 10) : undefined),
+    [id]
+  );
 
-  // Detect context: blog | youtube | topic | launch
+  // ✅ Detect context correctly from /customer/:context/...
   const contextSegment = useMemo(() => {
-    const first = location.pathname.split("/").filter(Boolean)[0];
-    if (["blog", "youtube", "topic", "launch"].includes(first)) {
-      return first as "blog" | "youtube" | "topic" | "launch";
+    const parts = location.pathname.split("/").filter(Boolean);
+    // ex: ["customer","launch","posttoblotato","27"]
+    const customerIdx = parts.indexOf("customer");
+    const maybe = customerIdx >= 0 ? parts[customerIdx + 1] : parts[0];
+
+    if (maybe && ["blog", "youtube", "topic", "launch"].includes(maybe)) {
+      return maybe as "blog" | "youtube" | "topic" | "launch";
     }
-    return "blog"; // sensible default
+    return "blog";
   }, [location.pathname]);
 
-const backHref = useMemo(() => {
-  if (!generationId) return null;
-  return `/customer/${contextSegment}/view/${generationId}`;
-}, [contextSegment, generationId]);
-
+  // ✅ Back link uses detected context
+  const backHref = useMemo(() => {
+    if (!generationId) return null;
+    return `/customer/${contextSegment}/view/${generationId}`;
+  }, [contextSegment, generationId]);
 
   // Inputs
   const [imgSrc, setImgSrc] = useState("");
@@ -85,7 +95,7 @@ const backHref = useMemo(() => {
   const [customerId, setCustomerId] = useState<number | null>(null);
   const [customerErr, setCustomerErr] = useState<string | null>(null);
 
-  // ✅ get customer_id the same way as your other page
+  // ✅ get customer_id same way as other pages
   useEffect(() => {
     (async () => {
       try {
@@ -95,7 +105,7 @@ const backHref = useMemo(() => {
         setCustomerId(cid);
       } catch (err: any) {
         setCustomerErr(
-          "Could not determine customer_id from /customers/me. Make sure you're logged in and the route is under auth."
+          "Could not determine customer_id from /customers/me. Make sure you're logged in and this route is under auth."
         );
         console.error(err);
       }
@@ -143,7 +153,7 @@ const backHref = useMemo(() => {
           url: val,
           kind, // "image" | "video"
           generation_id: generationId,
-          customer_id: customerId, // ✅ always pass it
+          customer_id: customerId,
         }),
       });
 
@@ -157,11 +167,14 @@ const backHref = useMemo(() => {
 
       setOut(hosted);
       setDone(true);
-      toast.success(`${kind === "image" ? "Image" : "Video"} uploaded successfully!`);
+      toast.success(
+        `${kind === "image" ? "Image" : "Video"} uploaded successfully!`
+      );
     } catch (e: any) {
       const msg = String(e?.message || "");
       if (msg.includes("HTTP 403") && /Generation does not belong/i.test(msg)) {
-        const friendly = "Forbidden: this generation belongs to a different customer.";
+        const friendly =
+          "Forbidden: this generation belongs to a different customer.";
         setErr(friendly);
         toast.error(friendly);
       } else {
@@ -177,8 +190,10 @@ const backHref = useMemo(() => {
     }
   }
 
-  const imgButtonDisabled = !imgSrc.trim() || imgPosting || !generationId || imgDone;
-  const vidButtonDisabled = !vidSrc.trim() || vidPosting || !generationId || vidDone;
+  const imgButtonDisabled =
+    !imgSrc.trim() || imgPosting || !generationId || imgDone;
+  const vidButtonDisabled =
+    !vidSrc.trim() || vidPosting || !generationId || vidDone;
 
   return (
     <div className="p-4 md:p-6">
@@ -197,7 +212,8 @@ const backHref = useMemo(() => {
 
       {!generationId && (
         <div className="mb-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-md p-3">
-          Missing content generation id in URL. Open this page via <code>/{contextSegment}/posttoblotato/:id</code>.
+          Missing content generation id in URL. Open this page via{" "}
+          <code>/customer/{contextSegment}/posttoblotato/:id</code>.
         </div>
       )}
 
@@ -208,7 +224,8 @@ const backHref = useMemo(() => {
       )}
 
       <p className="text-[13px] text-gray-600 text-center max-w-3xl mx-auto leading-snug">
-        If You Do Not Like The Image Output, You Can Upload Your Own To Your GoHighlevel account, in the media section.
+        If You Do Not Like The Image Output, You Can Upload Your Own To Your
+        GoHighlevel account, in the media section.
       </p>
 
       <div className="grid md:grid-cols-3 gap-4 items-start mt-4">
@@ -230,7 +247,9 @@ const backHref = useMemo(() => {
               }`}
               disabled={imgButtonDisabled}
               onClick={() => handleUpload("image")}
-              title={!generationId ? "Missing content generation id from URL" : undefined}
+              title={
+                !generationId ? "Missing content generation id from URL" : undefined
+              }
             >
               {imgPosting ? "Posting…" : imgDone ? "Done" : "Start"}
             </button>
@@ -254,7 +273,9 @@ const backHref = useMemo(() => {
               }`}
               disabled={vidButtonDisabled}
               onClick={() => handleUpload("video")}
-              title={!generationId ? "Missing content generation id from URL" : undefined}
+              title={
+                !generationId ? "Missing content generation id from URL" : undefined
+              }
             >
               {vidPosting ? "Posting…" : vidDone ? "Done" : "Start"}
             </button>
@@ -272,8 +293,12 @@ const backHref = useMemo(() => {
               className="block w-full bg-white border border-gray-300 rounded-md py-1 px-4 text-center shadow-sm hover:bg-gray-50"
               title={imgOut}
             >
-              <div className="text-gray-700 font-medium break-all">Image Output Url</div>
-              <div className="text-xs text-blue-600">Click URL link to see image</div>
+              <div className="text-gray-700 font-medium break-all">
+                Image Output Url
+              </div>
+              <div className="text-xs text-blue-600">
+                Click URL link to see image
+              </div>
             </a>
           ) : (
             <button
@@ -281,7 +306,9 @@ const backHref = useMemo(() => {
               disabled
             >
               <div className="text-gray-700 font-medium">Image OutPut Url Here</div>
-              <div className="text-xs text-blue-600">Click URL link to see image</div>
+              <div className="text-xs text-blue-600">
+                Click URL link to see image
+              </div>
             </button>
           )}
 
@@ -294,8 +321,12 @@ const backHref = useMemo(() => {
               className="block w-full bg-white border border-gray-300 rounded-md py-1 px-4 text-center shadow-sm hover:bg-gray-50"
               title={vidOut}
             >
-              <div className="text-gray-700 font-medium break-all">Video Output Url</div>
-              <div className="text-xs text-blue-600">Click URL link to see video</div>
+              <div className="text-gray-700 font-medium break-all">
+                Video Output Url
+              </div>
+              <div className="text-xs text-blue-600">
+                Click URL link to see video
+              </div>
             </a>
           ) : (
             <button
@@ -303,7 +334,9 @@ const backHref = useMemo(() => {
               disabled
             >
               <div className="text-gray-700 font-medium">Video OutPut Url Here</div>
-              <div className="text-xs text-blue-600">Click URL link to see video</div>
+              <div className="text-xs text-blue-600">
+                Click URL link to see video
+              </div>
             </button>
           )}
 
@@ -313,7 +346,9 @@ const backHref = useMemo(() => {
             </p>
           ) : null}
 
-          <p className="text-[11px] text-gray-500 pl-1 text-center">**it 4 or 5 min to produce the video**</p>
+          <p className="text-[11px] text-gray-500 pl-1 text-center">
+            **it 4 or 5 min to produce the video**
+          </p>
         </div>
       </div>
     </div>
