@@ -14,28 +14,19 @@ export default function ResetPassword() {
   const email = q.get("email") || "";
 
   const [password, setPassword] = React.useState("");
-  const [password2, setPassword2] = React.useState("");
+  const [confirm, setConfirm] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [ok, setOk] = React.useState<string | null>(null);
 
-  async function submit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setOk(null);
 
-    if (!token || !email) {
-      setError("Invalid reset link. Please request a new one.");
-      return;
-    }
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
-    if (password !== password2) {
-      setError("Passwords do not match.");
-      return;
-    }
+    if (!token || !email) return setError("Invalid reset link. Request a new one.");
+    if (password.length < 6) return setError("Password must be at least 6 characters.");
+    if (password !== confirm) return setError("Passwords do not match.");
 
     setLoading(true);
     try {
@@ -45,11 +36,10 @@ export default function ResetPassword() {
           email,
           token,
           password,
-          password_confirmation: password2,
+          password_confirmation: confirm,
         }),
       });
-
-      setOk(res?.message || "Password reset successful. Redirecting to login...");
+      setOk(res?.message || "Password reset successful. Redirecting…");
       setTimeout(() => nav("/", { replace: true }), 1200);
     } catch (err: any) {
       setError(err?.message || "Reset failed.");
@@ -61,26 +51,26 @@ export default function ResetPassword() {
   return (
     <div className="min-h-screen grid place-items-center bg-slate-50 p-4">
       <div className="w-full max-w-md rounded-xl border bg-white p-6 shadow">
-        <h2 className="text-lg font-bold mb-1">Reset Password</h2>
-        <p className="text-sm text-slate-600 mb-4">
-          Resetting for <span className="font-medium">{email || "unknown email"}</span>
+        <h1 className="text-lg font-bold">Reset Password</h1>
+        <p className="text-sm text-slate-600 mt-1 mb-4">
+          Account: <span className="font-medium">{email || "unknown"}</span>
         </p>
 
-        <form onSubmit={submit} className="space-y-3">
+        <form onSubmit={onSubmit} className="space-y-3">
           <input
-            type="password"
             className="w-full rounded-lg border px-3 py-2"
+            type="password"
             placeholder="New password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
           <input
-            type="password"
             className="w-full rounded-lg border px-3 py-2"
+            type="password"
             placeholder="Confirm new password"
-            value={password2}
-            onChange={(e) => setPassword2(e.target.value)}
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
             required
           />
 
@@ -91,13 +81,13 @@ export default function ResetPassword() {
             disabled={loading}
             className="w-full rounded-lg bg-slate-900 py-2 text-white disabled:opacity-60"
           >
-            {loading ? "Resetting..." : "Reset password"}
+            {loading ? "Resetting..." : "Reset Password"}
           </button>
         </form>
 
-        <p className="mt-4 text-center text-xs">
+        <div className="mt-4 text-center text-xs">
           <Link to="/" className="text-sky-600 hover:underline">Back to login</Link>
-        </p>
+        </div>
       </div>
     </div>
   );
