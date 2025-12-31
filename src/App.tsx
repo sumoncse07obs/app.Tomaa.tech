@@ -9,6 +9,7 @@ import UserRouter from "@/components/user";
 import AdminRouter from "@/components/admin";
 import CustomerRouter from "@/components/customer";
 import Register from "@/components/Register";
+import ForgotPassword from "@/components/ForgotPassword";
 import Payment from "@/components/Payment";
 
 import {
@@ -153,7 +154,14 @@ export default function App() {
             </PublicOnlyRoute>
           }
         />
-
+        <Route
+          path="/forgot-password"
+          element={
+            <PublicOnlyRoute>
+              <ForgotPassword />
+            </PublicOnlyRoute>
+          }
+        />
         {/* Payment: reachable by inactive customers */}
         <Route path="/payment" element={<Payment />} />
 

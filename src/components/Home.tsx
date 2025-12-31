@@ -131,7 +131,14 @@ export default function Home() {
                 >
                   {loading ? "Signing in..." : "Sign in"}
                 </button>
-
+                <p className="text-center text-xs">
+                  <Link
+                    to="/forgot-password"
+                    className="text-sky-600 hover:underline"
+                  >
+                    Forgot your password?
+                  </Link>
+                </p>
                 <p className="mt-3 text-center text-xs text-slate-600 sm:text-sm">
                   Don’t have an account?{" "}
                   <Link to="/register" className="font-medium text-sky-600 hover:underline">
