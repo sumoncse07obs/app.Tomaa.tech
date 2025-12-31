@@ -10,6 +10,7 @@ import AdminRouter from "@/components/admin";
 import CustomerRouter from "@/components/customer";
 import Register from "@/components/Register";
 import ForgotPassword from "@/components/ForgotPassword";
+import ResetPassword from "@/components/ResetPassword";
 import Payment from "@/components/Payment";
 
 import {
@@ -159,6 +160,14 @@ export default function App() {
           element={
             <PublicOnlyRoute>
               <ForgotPassword />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <PublicOnlyRoute>
+              <ResetPassword />
             </PublicOnlyRoute>
           }
         />
