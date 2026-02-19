@@ -1,7 +1,8 @@
 // src/components/customer/ApiSettings.tsx
 import React from "react";
-import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
+import { Settings as SettingsIcon, KeyRound, Plug } from "lucide-react";
 
 type Settings = {
   openai_api_key?: string | null;
@@ -27,6 +28,7 @@ type Settings = {
 
 type CustomerMeta = {
   id: number;
+  customer_id?: number; // from /customers/me sometimes
   customer_number?: string | null;
   business_name?: string | null;
   user?: { name?: string | null } | null;
@@ -82,8 +84,6 @@ function textToIdArray(txt: string): string[] {
 function arrayToText(arr?: string[] | null): string {
   return (arr ?? []).join(", ");
 }
-
-// Normalize various backend shapes (0/1, "true"/"false", etc.) to boolean
 function toBool(v: any): boolean {
   if (typeof v === "boolean") return v;
   if (typeof v === "number") return v !== 0;
@@ -91,30 +91,13 @@ function toBool(v: any): boolean {
   return false;
 }
 
-/** Get customer id from route patterns */
-function useCustomerId(): number | null {
-  const params = useParams();
-  const location = useLocation();
-
-  const candidates = [
-    params.id,
-    // @ts-ignore – allow common alternates
-    params.customerId,
-    // @ts-ignore
-    params.cid,
-  ].filter(Boolean) as string[];
-
-  for (const c of candidates) {
-    const n = Number(c);
-    if (!Number.isNaN(n) && n > 0) return n;
-  }
-
-  const m = location.pathname.match(/customer-dashboard\/(\d+)/i);
-  if (m?.[1]) {
-    const n = Number(m[1]);
-    if (!Number.isNaN(n) && n > 0) return n;
-  }
-  return null;
+/** ✅ Same idea as NewBlogContents.tsx: get customer_id from /customers/me */
+async function getCustomerIdFromAuth(): Promise<number> {
+  const res = await api<any>("/customers/me");
+  const data = res?.data ?? res;
+  const id = Number(data?.customer_id ?? data?.id ?? 0);
+  if (!id || Number.isNaN(id)) throw new Error("Failed to resolve customer_id from /customers/me");
+  return id;
 }
 
 /* =========================
@@ -123,7 +106,8 @@ function useCustomerId(): number | null {
 export default function ApiSettings() {
   const nav = useNavigate();
   const location = useLocation();
-  const customerId = useCustomerId();
+
+  const [customerId, setCustomerId] = React.useState<number | null>(null);
 
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
@@ -136,35 +120,32 @@ export default function ApiSettings() {
   const [fbPagesText, setFbPagesText] = React.useState("");
   const [liPagesText, setLiPagesText] = React.useState("");
 
-  // Customer meta (number + name)
   const [customer, setCustomer] = React.useState<CustomerMeta | null>(null);
 
-  // Single source of truth for invalid id -> show toast once via effect
-  const invalidId = !customerId;
+  // ✅ Resolve customer id for /customer/Settings route (no params)
   React.useEffect(() => {
-    if (invalidId) toast.error("Invalid or missing customer ID in the URL.");
-  }, [invalidId]);
+    let alive = true;
+    (async () => {
+      try {
+        const id = await getCustomerIdFromAuth();
+        if (!alive) return;
+        setCustomerId(id);
+      } catch (e: any) {
+        if (!alive) return;
+        const msg = e?.message || "Failed to fetch customer id";
+        setError(msg);
+        toast.error(msg);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
-  if (invalidId) {
-    return (
-      <div className="max-w-xl mx-auto p-6">
-        <h1 className="text-xl font-semibold mb-3">Integration Settings</h1>
-        <div className="rounded-lg border border-rose-300 bg-rose-50 p-4 text-rose-900">
-          Invalid or missing customer ID in the URL. Expected route:
-          <div className="mt-1 font-mono text-sm">/admin/customer-dashboard/:id/api</div>
-          <div className="mt-3 text-xs text-slate-600">
-            Debug: <span className="font-mono">{location.pathname}</span>
-          </div>
-        </div>
-        <button className="mt-4 rounded-lg border px-4 py-2" onClick={() => nav(-1)}>
-          Go Back
-        </button>
-      </div>
-    );
-  }
-
-  // Load settings + customer meta in parallel
+  // Load settings + customer meta (after customerId exists)
   React.useEffect(() => {
+    if (!customerId) return;
+
     let alive = true;
     (async () => {
       setLoading(true);
@@ -178,7 +159,6 @@ export default function ApiSettings() {
 
         if (!alive) return;
 
-        // Settings
         if (settingsRes.status === "fulfilled") {
           const raw: Settings = settingsRes.value?.data ?? settingsRes.value ?? {};
           const data: Settings = {
@@ -203,7 +183,6 @@ export default function ApiSettings() {
           }
         }
 
-        // Customer meta (non-blocking)
         if (customerRes.status === "fulfilled") {
           const c: CustomerMeta = customerRes.value?.data ?? customerRes.value ?? null;
           if (c) setCustomer(c);
@@ -213,6 +192,7 @@ export default function ApiSettings() {
         setLoading(false);
       }
     })();
+
     return () => {
       alive = false;
     };
@@ -224,12 +204,11 @@ export default function ApiSettings() {
       setForm((f) => ({ ...f, [key]: e.target.value }));
     };
 
-  const toggleShow = (key: string) => {
-    setShowKey((s) => ({ ...s, [key]: !s[key] }));
-  };
+  const toggleShow = (key: string) => setShowKey((s) => ({ ...s, [key]: !s[key] }));
 
-  // Save
   const save = async () => {
+    if (!customerId) return;
+
     setSaving(true);
     setError(null);
     setAuthIssue(null);
@@ -238,8 +217,6 @@ export default function ApiSettings() {
       ...form,
       blotato_facebook_page_ids: textToIdArray(fbPagesText),
       blotato_linkeidin_page_ids: textToIdArray(liPagesText),
-
-      // If backend prefers booleans, this is fine. If it needs 0/1, convert here.
       blotato_linkeidin_active: !!form.blotato_linkeidin_active,
     };
 
@@ -269,10 +246,15 @@ export default function ApiSettings() {
   if (authIssue) {
     return (
       <div className="max-w-xl mx-auto p-6">
-        <h1 className="text-xl font-semibold mb-2">Integration Settings</h1>
+        <div className="flex items-center gap-2 mb-2">
+          <SettingsIcon size={20} />
+          <h1 className="text-xl font-semibold">Integration Settings</h1>
+        </div>
+
         <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900 mb-4">
           {authIssue.text}
         </div>
+
         <div className="flex gap-3">
           <button className="rounded-lg bg-black text-white px-4 py-2" onClick={() => nav("/", { replace: true })}>
             Go to Login
@@ -299,11 +281,7 @@ export default function ApiSettings() {
           placeholder={`Enter ${label}`}
           autoComplete="off"
         />
-        <button
-          type="button"
-          className="rounded-md border px-3 py-2 text-sm"
-          onClick={() => toggleShow(field as string)}
-        >
+        <button type="button" className="rounded-md border px-3 py-2 text-sm" onClick={() => toggleShow(field as string)}>
           {showKey[field as string] ? "Hide" : "Show"}
         </button>
       </div>
@@ -323,38 +301,49 @@ export default function ApiSettings() {
     </div>
   );
 
-  // Friendly header line (optional to render)
-  const displayNumber = customer?.customer_number ?? `${customerId}`;
+  const displayNumber = customer?.customer_number ?? (customerId ? `${customerId}` : "—");
   const displayName = customer?.business_name || customer?.user?.name || "—";
 
   return (
     <div className="max-w-3xl mx-auto p-6">
-      <h1 className="text-2xl font-semibold mb-1">Integration Settings</h1>
-      <p className="text-sm text-slate-500 mb-6">
-        Customer #{displayNumber} • {displayName}
-      </p>
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <SettingsIcon size={22} />
+            <h1 className="text-2xl font-semibold">Integration Settings</h1>
+          </div>
+          <p className="text-sm text-slate-500">
+            Customer #{displayNumber} • {displayName}
+          </p>
+          <p className="mt-1 text-[11px] text-slate-400">
+            Debug: <span className="font-mono">{location.pathname}</span>
+          </p>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 gap-6">
-        {/* API Keys */}
         <section className="rounded-xl border p-4">
-          <h2 className="font-medium mb-3">API Keys</h2>
+          <div className="flex items-center gap-2 mb-3">
+            <KeyRound size={18} />
+            <h2 className="font-medium">API Keys</h2>
+          </div>
           {maskedInput("OpenAI API Key", "openai_api_key")}
           {maskedInput("Blotato API Key", "blotato_api_key")}
           {maskedInput("DumplingAI API Key", "dumplingai_api_key")}
         </section>
 
-        {/* Blotato Account IDs */}
         <section className="rounded-xl border p-4">
-          <h2 className="font-medium mb-3">Blotato Account IDs</h2>
+          <div className="flex items-center gap-2 mb-3">
+            <Plug size={18} />
+            <h2 className="font-medium">Blotato Account IDs</h2>
+          </div>
 
           {textInput("Twitter ID", "blotato_twitter_id")}
 
-          {/* LinkedIn ID + Active toggle */}
           <div className="mb-4">
             <div className="flex items-center justify-between gap-3">
               <label className="block text-sm font-medium mb-1">LinkedIn ID</label>
 
-              {/* Toggle switch */}
               <button
                 type="button"
                 role="switch"
@@ -389,7 +378,10 @@ export default function ApiSettings() {
             />
 
             <p className="mt-1 text-xs text-slate-500">
-              Status: {form.blotato_linkeidin_active ? "Active (shown/used on frontend)" : "Inactive (hidden/ignored on frontend)"}
+              Status:{" "}
+              {form.blotato_linkeidin_active
+                ? "Active (shown/used on frontend)"
+                : "Inactive (hidden/ignored on frontend)"}
             </p>
           </div>
 
@@ -402,9 +394,9 @@ export default function ApiSettings() {
           {textInput("YouTube ID", "blotato_youtube_id")}
         </section>
 
-        {/* Page IDs (multiple) */}
         <section className="rounded-xl border p-4">
           <h2 className="font-medium mb-3">Page IDs (Multiple)</h2>
+
           <div className="mb-4">
             <label className="block text-sm font-medium mb-1">
               Facebook Page IDs (comma separated — e.g., 9927653170252, 9927653170252)
@@ -429,6 +421,10 @@ export default function ApiSettings() {
             />
           </div>
         </section>
+
+        {error ? (
+          <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-rose-900">{error}</div>
+        ) : null}
 
         <div className="flex items-center gap-3">
           <button

@@ -19,6 +19,7 @@ const navItems = [
   { to: "/customer/launch/list", label: "Launch Automation", icon: "🚀" },
   { to: "/customer/tips", label: "Tips & Tricks", icon: "💡" },
   { to: "/customer/training", label: "Training Videos", icon: "🎥" },
+  { to: "/customer/Settings", label: "Settings", icon: "⚙️" },
 ];
 
 export default function Sidebar({

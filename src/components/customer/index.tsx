@@ -31,6 +31,7 @@ import NewSupportTicket from "@/components/support/NewSupportTicket";
 import ViewSupportTicket from "@/components/support/ViewSupportTicket";
 
 import PublishedLogs from "@/components/customer/PublishedLogs";
+import ApiSettings from "@/components/customer/ApiSettings";
 
 export default function CustomerRouter() {
   return (
@@ -82,6 +83,8 @@ export default function CustomerRouter() {
         <Route path="support" element={<SupportHome />} />
         <Route path="support/new" element={<NewSupportTicket />} />
         <Route path="support/:id" element={<ViewSupportTicket />} />
+        <Route path="Settings" element={<ApiSettings />} />
+
 
         {/* Catch-all inside /customer */}
         <Route path="*" element={<Navigate to="." replace />} />
