@@ -52,6 +52,8 @@ export type PromptSetting = {
 
   youtube_video_title_prompt?: string | null;
   youtube_video_content_prompt?: string | null;
+  youtube_video_long_title_prompt?: string | null;
+  youtube_video_long_content_prompt?: string | null;
 
   pinterest_title_prompt?: string | null;
   pinterest_content_prompt?: string | null;
@@ -142,6 +144,11 @@ const DEFAULT_LAUNCH_PROMPTS: Partial<PromptSetting> = {
   youtube_video_title_prompt:
     "Write a compelling Youtube video post title in 70 characters or fewer based on this blog summary. The title should be smart, professional, and relevant to business professionals. Avoid hashtags, emojis, quotation marks, or informal language. Return only the title with no extra text.",
   youtube_video_content_prompt:
+    "Write a short Youtube video post (max 250 characters) based on this blog summary. The tone should be professional yet conversational—sounding human, not overly polished. Avoid hashtags and emojis.",
+
+  youtube_video_long_title_prompt:
+    "Write a compelling Youtube video post title in 70 characters or fewer based on this blog summary. The title should be smart, professional, and relevant to business professionals. Avoid hashtags, emojis, quotation marks, or informal language. Return only the title with no extra text.",
+  youtube_video_long_content_prompt:
     "Write a short Youtube video post (max 250 characters) based on this blog summary. The tone should be professional yet conversational—sounding human, not overly polished. Avoid hashtags and emojis.",
 
   // Pinterest
@@ -362,8 +369,10 @@ const FIELD_GROUPS: { title: string; items: FieldDef[] }[] = [
     ],
   },
   { title: "YouTube", items: [
-      { key: "youtube_video_title_prompt", label: "YouTube Video Title", rows: 3 },
-      { key: "youtube_video_content_prompt", label: "YouTube Video Description", rows: 3 },
+      { key: "youtube_video_title_prompt", label: "YouTube Short Video Title", rows: 3 },
+      { key: "youtube_video_content_prompt", label: "YouTube Short Video Description", rows: 3 },
+      { key: "youtube_video_long_title_prompt", label: "YouTube Video Title", rows: 3 },
+      { key: "youtube_video_long_content_prompt", label: "YouTube Video Description", rows: 3 },
     ],
   },
   { title: "Pinterest", items: [

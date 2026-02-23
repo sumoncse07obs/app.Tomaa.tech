@@ -1,6 +1,6 @@
 // src/components/customer/layout/Sidebar.tsx
 import React from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { logout, type User } from "@/auth";
 
 type Props = {
@@ -19,7 +19,15 @@ const navItems = [
   { to: "/customer/launch/list", label: "Launch Automation", icon: "🚀" },
   { to: "/customer/tips", label: "Tips & Tricks", icon: "💡" },
   { to: "/customer/training", label: "Training Videos", icon: "🎥" },
-  { to: "/customer/Settings", label: "Settings", icon: "⚙️" },
+];
+
+// All go to /customer/Settings (optionally with a section param so Settings page can jump later)
+const settingsItems = [
+  { to: "/customer/Settings", label: "API Settings" },
+  //{ to: "/customer/Settings?section=blog", label: "Blog Prompt Settings" },
+  //{ to: "/customer/Settings?section=launch", label: "Launch Prompt Settings" },
+  //{ to: "/customer/Settings?section=topic", label: "Topic Prompt Settings" },
+  //{ to: "/customer/Settings?section=youtube", label: "YouTube Prompt Settings" },
 ];
 
 export default function Sidebar({
@@ -31,6 +39,7 @@ export default function Sidebar({
   customerNumber,
 }: Props) {
   const nav = useNavigate();
+  const loc = useLocation();
   const [loggingOut, setLoggingOut] = React.useState(false);
 
   // 🔹 Pull business_name from localStorage (set by getCustomerNumber)
@@ -44,6 +53,15 @@ export default function Sidebar({
       // ignore if localStorage not available
     }
   }, []);
+
+  // Settings dropdown
+  const isOnSettings = loc.pathname.toLowerCase().startsWith("/customer/settings");
+  const [settingsOpen, setSettingsOpen] = React.useState<boolean>(isOnSettings);
+
+  React.useEffect(() => {
+    // Keep dropdown open when you're on settings routes
+    if (isOnSettings) setSettingsOpen(true);
+  }, [isOnSettings]);
 
   const display = user?.name || user?.email || "Guest";
   const initial = display?.[0]?.toUpperCase() || "?";
@@ -121,6 +139,59 @@ export default function Sidebar({
               {!collapsed && <span>{it.label}</span>}
             </NavLink>
           ))}
+
+          {/* Settings dropdown */}
+          <div className="pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                if (collapsed) {
+                  setOpen(false);
+                  nav("/customer/Settings", { replace: false });
+                  return;
+                }
+                setSettingsOpen((v) => !v);
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm ${
+                isOnSettings
+                  ? "bg-slate-900 text-white"
+                  : "text-slate-700 hover:bg-slate-100"
+              }`}
+              aria-expanded={collapsed ? undefined : settingsOpen}
+              aria-controls={collapsed ? undefined : "sidebar-settings-subnav"}
+            >
+              <span className="text-base" aria-hidden>
+                ⚙️
+              </span>
+              {!collapsed && (
+                <>
+                  <span className="flex-1 text-left">Settings</span>
+                  <span className="text-xs">{settingsOpen ? "▲" : "▼"}</span>
+                </>
+              )}
+            </button>
+
+            {!collapsed && settingsOpen && (
+              <div id="sidebar-settings-subnav" className="mt-1 ml-8 space-y-1">
+                {settingsItems.map((s) => (
+                  <NavLink
+                    key={s.label}
+                    to={s.to}
+                    className={({ isActive }) =>
+                      `block px-3 py-2 rounded-lg text-sm ${
+                        isActive || isOnSettings
+                          ? "text-slate-900 bg-slate-100"
+                          : "text-slate-600 hover:bg-slate-100"
+                      }`
+                    }
+                    onClick={() => setOpen(false)}
+                  >
+                    {s.label}
+                  </NavLink>
+                ))}
+              </div>
+            )}
+          </div>
         </nav>
 
         {/* Footer */}
@@ -134,7 +205,6 @@ export default function Sidebar({
 
                 {isCustomer && (
                   <>
-                    {/* 🔹 Business name right above Customer # */}
                     {businessName && (
                       <div className="text-xs text-slate-600 truncate">
                         Company # {businessName}
@@ -148,6 +218,7 @@ export default function Sidebar({
               </>
             )}
           </div>
+
           <button
             disabled={loggingOut}
             onClick={async () => {

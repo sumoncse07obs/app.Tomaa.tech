@@ -7,7 +7,7 @@ import { Settings as SettingsIcon, KeyRound, Plug } from "lucide-react";
 type Settings = {
   openai_api_key?: string | null;
   blotato_api_key?: string | null;
-  dumplingai_api_key?: string | null;
+  //dumplingai_api_key?: string | null;
 
   blotato_twitter_id?: string | null;
   blotato_linkeidin_id?: string | null; // keep current backend key
@@ -329,7 +329,7 @@ export default function ApiSettings() {
           </div>
           {maskedInput("OpenAI API Key", "openai_api_key")}
           {maskedInput("Blotato API Key", "blotato_api_key")}
-          {maskedInput("DumplingAI API Key", "dumplingai_api_key")}
+          {/*{maskedInput("DumplingAI API Key", "dumplingai_api_key")}*/}
         </section>
 
         <section className="rounded-xl border p-4">
