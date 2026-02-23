@@ -95,11 +95,11 @@ export default function Sidebar({
             <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500 to-sky-400 overflow-hidden">
               <img
                 src="/logo.svg"
-                alt="TOMA Logo"
+                alt="TOMAA Logo"
                 className="h-9 w-9 rounded-xl object-contain"
               />
             </div>
-            {!collapsed && <span className="font-semibold">TOMA</span>}
+            {!collapsed && <span className="font-semibold">TOMAA</span>}
           </NavLink>
 
           <button
